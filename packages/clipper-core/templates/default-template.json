@@ -1,0 +1,16 @@
+{
+	"id": "url-any-full",
+	"name": "UrlAnyFull",
+	"behavior": "create",
+	"noteNameFormat": "{{title|safe_name}}",
+	"path": "",
+	"noteContentFormat": "# {{title}}\n\nSource: {{url}}\n\n{{content}}",
+	"properties": [
+		{ "name": "source", "value": "{{url}}", "type": "text" },
+		{ "name": "title", "value": "{{title}}", "type": "text" },
+		{ "name": "author", "value": "{{author}}", "type": "text" },
+		{ "name": "published", "value": "{{published}}", "type": "date" },
+		{ "name": "site", "value": "{{site}}", "type": "text" },
+		{ "name": "tags", "value": "clippings", "type": "list" }
+	]
+}

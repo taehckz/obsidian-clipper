@@ -1,0 +1,32 @@
+{
+	"name": "clipper-core",
+	"version": "0.1.0",
+	"description": "Reusable URL/template clipping package with vendored core engine.",
+	"type": "commonjs",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": "./dist/index.js"
+	},
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "tsc -p tsconfig.json",
+		"clean": "rm -rf dist",
+		"example:local": "node examples/run-local.js",
+		"example:url": "node examples/run-url.js",
+		"example:url:full": "node examples/run-url-full.js",
+		"example:url:any": "node examples/run-url-any.js"
+	},
+	"dependencies": {
+		"dayjs": "^1.11.13",
+		"defuddle": "^0.14.0",
+		"linkedom": "^0.18.0",
+		"lz-string": "^1.5.0"
+	},
+	"devDependencies": {
+		"@types/node": "^24.0.0",
+		"typescript": "^5.5.4"
+	}
+}
