@@ -23,3 +23,6 @@ assets/shared
 .cursorrules
 .env
 context/
+
+# clipper-core runtime UI cache
+packages/clipper-core/ui/.data/
