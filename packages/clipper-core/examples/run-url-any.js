@@ -1,6 +1,6 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { ClipperCore } = require('../dist/index.js');
+const { ClipperCore, JsonFilePolicyStore } = require('../dist/index.js');
 
 function parseArgs(argv) {
 	const args = argv.slice(2);
@@ -10,6 +10,11 @@ function parseArgs(argv) {
 	let tag = 'clippings';
 	let userAgent = 'clipper-core-local-test/1.0';
 	let lang = 'en-US,en;q=0.9';
+	let auto = false;
+	let trace = false;
+	let policyFile = '';
+	let minContentLength = 200;
+	let minWordCount = 60;
 
 	for (let i = 0; i < args.length; i++) {
 		const arg = args[i];
@@ -41,19 +46,51 @@ function parseArgs(argv) {
 			console.log(
 				[
 					'Usage:',
-					'  npm run example:url:any -- "<url>" [--template-file <path>] [--out <path>] [--tag <name>] [--user-agent <ua>] [--lang <accept-language>]',
+					'  npm run example:url:any -- "<url>" [--template-file <path>] [--out <path>] [--tag <name>] [--user-agent <ua>] [--lang <accept-language>] [--auto] [--trace] [--policy-file <path>] [--min-content-length <n>] [--min-word-count <n>]',
 				].join('\n')
 			);
 			process.exit(0);
 		}
+		if (arg === '--auto') {
+			auto = true;
+			continue;
+		}
+		if (arg === '--trace') {
+			trace = true;
+			continue;
+		}
+		if (arg === '--policy-file') {
+			policyFile = args[++i] || '';
+			continue;
+		}
+		if (arg === '--min-content-length') {
+			minContentLength = Number(args[++i] || minContentLength);
+			continue;
+		}
+		if (arg === '--min-word-count') {
+			minWordCount = Number(args[++i] || minWordCount);
+			continue;
+		}
 	}
 
 	if (!url) {
-		console.error('Usage: npm run example:url:any -- <url> [--template-file <path>] [--out <path>] [--tag <name>] [--user-agent <ua>] [--lang <accept-language>]');
+		console.error('Usage: npm run example:url:any -- <url> [--template-file <path>] [--out <path>] [--tag <name>] [--user-agent <ua>] [--lang <accept-language>] [--auto] [--trace] [--policy-file <path>] [--min-content-length <n>] [--min-word-count <n>]');
 		process.exit(1);
 	}
 
-	return { url, outPath, templateFile, tag, userAgent, lang };
+	return {
+		url,
+		outPath,
+		templateFile,
+		tag,
+		userAgent,
+		lang,
+		auto,
+		trace,
+		policyFile,
+		minContentLength,
+		minWordCount,
+	};
 }
 
 function toSafeFileName(input) {
@@ -115,21 +152,61 @@ async function loadTemplate(templateFile, tag) {
 }
 
 async function main() {
-	const { url: targetUrl, outPath, templateFile, tag, userAgent, lang } = parseArgs(process.argv);
+	const {
+		url: targetUrl,
+		outPath,
+		templateFile,
+		tag,
+		userAgent,
+		lang,
+		auto,
+		trace,
+		policyFile,
+		minContentLength,
+		minWordCount,
+	} = parseArgs(process.argv);
 
 	const core = new ClipperCore();
 	const template = await loadTemplate(templateFile, tag);
 
-	const result = await core.clipFromUrl({
-		url: targetUrl,
-		template,
-		fetchOptions: {
-			headers: {
-				'User-Agent': userAgent,
-				'Accept-Language': lang,
+	let result;
+	let autoResult;
+	if (auto) {
+		const policyStore = policyFile
+			? new JsonFilePolicyStore(path.resolve(policyFile))
+			: undefined;
+		autoResult = await core.clipFromUrlAuto({
+			url: targetUrl,
+			template,
+			fetchOptions: {
+				headers: {
+					'User-Agent': userAgent,
+					'Accept-Language': lang,
+				},
 			},
-		},
-	});
+			auto: {
+				enableTrace: trace,
+				policyStore,
+				thresholds: {
+					minContentLength,
+					minWordCount,
+					requireTitle: true,
+				},
+			},
+		});
+		result = autoResult.result;
+	} else {
+		result = await core.clipFromUrl({
+			url: targetUrl,
+			template,
+			fetchOptions: {
+				headers: {
+					'User-Agent': userAgent,
+					'Accept-Language': lang,
+				},
+			},
+		});
+	}
 
 	const defaultOutDir = path.join(__dirname, 'output');
 	await fs.mkdir(defaultOutDir, { recursive: true });
@@ -139,6 +216,20 @@ async function main() {
 	console.log(`URL=${targetUrl}`);
 	if (templateFile) {
 		console.log(`TemplateFile=${path.resolve(templateFile)}`);
+	}
+	if (auto) {
+		console.log('Mode=auto (Stage A/B)');
+		if (policyFile) {
+			console.log(`PolicyFile=${path.resolve(policyFile)}`);
+		}
+		if (trace && autoResult && autoResult.trace) {
+			console.log(
+				`Trace=stage:${autoResult.trace.finalStage}, route:${autoResult.trace.initialRoute.source}/${autoResult.trace.initialRoute.reason}`
+			);
+			console.log(
+				`Trace=stageA:${autoResult.trace.stageA.attempted ? 'yes' : 'no'} quality:${autoResult.trace.stageA.quality ? autoResult.trace.stageA.quality.score : 'n/a'}`
+			);
+		}
 	}
 	console.log(`Written=${finalOutPath}`);
 	console.log(`noteName=${result.noteName}`);

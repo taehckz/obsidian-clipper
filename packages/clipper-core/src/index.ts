@@ -2,7 +2,22 @@ import { parseHTML } from 'linkedom';
 import * as http from 'node:http';
 import * as https from 'node:https';
 import { URL } from 'node:url';
+import { PlaywrightRendererAdapter } from './auto/adapters/playwright';
+import {
+	decideAutoRoute,
+	evaluateClipQuality,
+	runAutoPipeline,
+} from './auto/pipeline';
+import { InMemoryPolicyStore } from './auto/policy-store';
 import { clip, matchTemplate } from './vendor/api';
+import type {
+	AutoThresholds,
+	ClipFromUrlAutoOptions,
+	DecisionTrace,
+	PlaywrightOptions,
+	PolicyStore,
+	RendererAdapter,
+} from './auto/types';
 
 export interface DocumentParser {
 	parseFromString(html: string, mimeType: string): any;
@@ -72,6 +87,11 @@ export interface ClipperCoreOptions {
 	fetchImpl?: typeof fetch;
 	htmlFetcher?: HtmlFetcher;
 	templateResolver?: TemplateResolver;
+	autoPolicyStore?: PolicyStore;
+	autoRendererAdapter?: RendererAdapter;
+	autoThresholds?: AutoThresholds;
+	playwrightOptions?: PlaywrightOptions;
+	enableAutoTrace?: boolean;
 }
 
 export interface ClipFromHtmlOptions {
@@ -89,6 +109,11 @@ export interface ClipFromUrlOptions {
 	fetchOptions?: RequestInit;
 	propertyTypes?: Record<string, string>;
 	documentParser?: DocumentParser;
+}
+
+export interface ClipFromUrlAutoResult {
+	result: ClipResult;
+	trace?: DecisionTrace;
 }
 
 export interface MatchTemplateForUrlOptions {
@@ -243,6 +268,11 @@ export class ClipperCore {
 	private readonly defaultFetch?: typeof fetch;
 	private readonly defaultHtmlFetcher?: HtmlFetcher;
 	private readonly defaultTemplateResolver?: TemplateResolver;
+	private readonly defaultAutoPolicyStore: PolicyStore;
+	private readonly defaultAutoRendererAdapter: RendererAdapter;
+	private readonly defaultAutoThresholds?: AutoThresholds;
+	private readonly defaultPlaywrightOptions?: PlaywrightOptions;
+	private readonly defaultEnableAutoTrace: boolean;
 
 	constructor(options: ClipperCoreOptions = {}) {
 		ensureRuntimeDomPolyfills();
@@ -250,6 +280,12 @@ export class ClipperCore {
 		this.defaultFetch = options.fetchImpl;
 		this.defaultHtmlFetcher = options.htmlFetcher;
 		this.defaultTemplateResolver = options.templateResolver;
+		this.defaultAutoPolicyStore = options.autoPolicyStore ?? new InMemoryPolicyStore();
+		this.defaultAutoRendererAdapter =
+			options.autoRendererAdapter ?? new PlaywrightRendererAdapter();
+		this.defaultAutoThresholds = options.autoThresholds;
+		this.defaultPlaywrightOptions = options.playwrightOptions;
+		this.defaultEnableAutoTrace = Boolean(options.enableAutoTrace);
 	}
 
 	async clipFromHtml(options: ClipFromHtmlOptions): Promise<ClipResult> {
@@ -273,6 +309,31 @@ export class ClipperCore {
 			template: options.template,
 			propertyTypes: options.propertyTypes,
 			documentParser: options.documentParser,
+		});
+	}
+
+	async clipFromUrlAuto(options: ClipFromUrlAutoOptions): Promise<ClipFromUrlAutoResult> {
+		const host = new URL(options.url).hostname;
+		const autoOptions = options.auto ?? {};
+		return runAutoPipeline({
+			url: options.url,
+			host,
+			template: options.template,
+			fetchOptions: options.fetchOptions,
+			propertyTypes: options.propertyTypes,
+			documentParser: options.documentParser,
+			auto: {
+				...autoOptions,
+				thresholds: autoOptions.thresholds ?? this.defaultAutoThresholds,
+				policyStore: autoOptions.policyStore ?? this.defaultAutoPolicyStore,
+				rendererAdapter: autoOptions.rendererAdapter ?? this.defaultAutoRendererAdapter,
+				playwright: autoOptions.playwright ?? this.defaultPlaywrightOptions,
+				enableTrace: autoOptions.enableTrace ?? this.defaultEnableAutoTrace,
+			},
+			fetchHtml: this.fetchHtml.bind(this),
+			clipFromHtml: this.clipFromHtml.bind(this),
+			evaluateQuality: evaluateClipQuality,
+			decideRoute: decideAutoRoute,
 		});
 	}
 
@@ -384,6 +445,12 @@ export function clipFromUrl(options: ClipFromUrlOptions): Promise<ClipResult> {
 	return defaultCore.clipFromUrl(options);
 }
 
+export function clipFromUrlAuto(
+	options: ClipFromUrlAutoOptions
+): Promise<ClipFromUrlAutoResult> {
+	return defaultCore.clipFromUrlAuto(options);
+}
+
 export function matchTemplateForUrl(
 	options: MatchTemplateForUrlOptions
 ): Promise<Template | undefined> {
@@ -394,4 +461,26 @@ export function clipFromTemplates(options: ClipFromTemplatesOptions): Promise<Cl
 	return defaultCore.clipFromTemplates(options);
 }
 
+export {
+	InMemoryPolicyStore,
+	JsonFilePolicyStore,
+	migratePolicyFile,
+	POLICY_SCHEMA_VERSION,
+} from './auto/policy-store';
+export { PlaywrightRendererAdapter } from './auto/adapters/playwright';
 export { clip, matchTemplate };
+export type {
+	AutoOptions,
+	AutoStage,
+	AutoThresholds,
+	ClipFromUrlAutoOptions,
+	DecisionTrace,
+	DomainPolicy,
+	PlaywrightOptions,
+	PolicyStore,
+	QualityCheck,
+	QualityEvaluation,
+	RendererAdapter,
+	RouteDecision,
+	RouteSource,
+} from './auto/types';

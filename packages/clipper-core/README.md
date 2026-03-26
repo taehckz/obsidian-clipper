@@ -6,6 +6,7 @@ Reusable clipping package for non-extension projects, with local vendored core l
 
 - `ClipperCore` class for embedding in apps/services.
 - `clipFromUrl()` for URL-first usage.
+- `clipFromUrlAuto()` for adaptive Stage A/B URL clipping.
 - `clipFromHtml()` for offline/local HTML usage.
 - `clipFromTemplates()` to auto-pick one template from many.
 - `matchTemplateForUrl()` for optional multi-template matching.
@@ -134,7 +135,9 @@ ContentLen: <non-zero>
 H1: About npm
 ```
 
-## Quick URL run (any URL)
+## Extract from a website URL (2 options)
+
+### Option 1: Bundled URL runner (`run-url-any.js`)
 
 ```bash
 # from packages/clipper-core
@@ -160,6 +163,58 @@ You can place custom templates under:
 Output will be written to:
 
 - `examples/output/<safe-url-name>.md`
+
+### Option 2: Reusable extraction script (`extract.js`)
+
+If you prefer a single script you can copy into other projects:
+
+```bash
+# from packages/clipper-core
+npm run build
+npm run example:extract -- "https://docs.npmjs.com/about-npm"
+```
+
+Optional output path:
+
+```bash
+npm run example:extract -- "https://docs.npmjs.com/about-npm" "./examples/output/my-output.md"
+```
+
+Both options support Stage A/B auto extraction. Option 1 is more CLI-style with flags, while Option 2 is easier to copy into another project and customize in code.
+
+## Local UI (input -> procedure -> output)
+
+Run local UI:
+
+```bash
+# from packages/clipper-core
+npm install
+npm install --save-dev playwright
+npx playwright install chromium
+npm run ui:start
+```
+
+Open:
+
+- `http://127.0.0.1:3040`
+
+If port `3040` is already in use:
+
+```bash
+CLIPPER_CORE_UI_PORT=3041 npm run ui:start
+```
+
+UI provides:
+
+- Input panel: URL, Stage A/B controls, thresholds, optional template JSON.
+- Procedure panel: route decision, Stage A quality checks, Stage B fallback usage, timings.
+- Output panel: final markdown content.
+
+## Standalone extraction plan
+
+When you are ready to split this package into an independent repository, follow:
+
+- `docs/extraction-plan.md`
 
 ## Example 3: Pick template from a list (`clipFromTemplates`)
 
@@ -191,6 +246,94 @@ const result = await core.clipFromTemplates({
 - `htmlFetcher`: fully control how HTML is retrieved (Playwright, cache, signed requests).
 - `templateResolver`: custom business rules for selecting a template.
 - `clipFromUrl` has automatic fallback for oversized response headers (common on heavy sites), so you do not need a manual HTML export flow.
+- `clipFromUrlAuto` adds quality thresholds + domain policy routing before using browser-rendered fallback.
+
+## Auto mode (Stage A/B) for reuse
+
+`clipFromUrlAuto` is designed to stay reusable across projects by separating concerns:
+
+- Stage A: normal HTTP fetch + extraction (fast path).
+- Stage B: browser-rendered fallback through a `RendererAdapter` (default: `PlaywrightRendererAdapter`).
+- Domain policy store is pluggable (`InMemoryPolicyStore` default, optional `JsonFilePolicyStore` for persistence).
+- Thresholds are configurable (`minContentLength`, `minWordCount`, `requireTitle`).
+- Optional decision trace output can be used later by UI tooling.
+
+Example:
+
+```ts
+import {
+  ClipperCore,
+  JsonFilePolicyStore
+} from "clipper-core";
+
+const core = new ClipperCore({
+  enableAutoTrace: true
+});
+
+const out = await core.clipFromUrlAuto({
+  url: "https://example.com/news",
+  template,
+  auto: {
+    policyStore: new JsonFilePolicyStore("./data/domain-policy.json"),
+    thresholds: {
+      minContentLength: 240,
+      minWordCount: 80,
+      requireTitle: true
+    },
+    enableTrace: true
+  }
+});
+
+console.log(out.result.noteName);
+console.log(out.trace?.finalStage); // stageA | stageB
+```
+
+CLI-style example with bundled script:
+
+```bash
+# from packages/clipper-core
+npm run build
+npm run example:url:auto -- "https://example.com/article" \
+  --policy-file "./examples/output/domain-policy.json" \
+  --min-content-length 240 \
+  --min-word-count 80 \
+  --trace
+```
+
+## Testing strategy (unit + contract + E2E)
+
+`clipper-core` now includes all three test layers:
+
+- Unit tests: pure logic checks (quality thresholds, route decision rules).
+- Contract tests: module boundary guarantees (`PolicyStore`, pipeline fallbacks, migration shape).
+- E2E tests: full `ClipperCore` flow on a local HTTP server (including Stage A -> Stage B fallback path).
+
+Run from `packages/clipper-core`:
+
+```bash
+npm run test:unit
+npm run test:contract
+npm run test:e2e
+```
+
+Run all:
+
+```bash
+npm test
+```
+
+Optional real Playwright integration test (covers Stage B runtime lifecycle):
+
+```bash
+RUN_PLAYWRIGHT_INTEGRATION=1 npm run test:integration:playwright
+```
+
+Test locations:
+
+- `tests/unit/*.test.cjs`
+- `tests/contract/*.test.cjs`
+- `tests/e2e/*.test.cjs`
+- `tests/integration/*.integration.test.cjs` (opt-in)
 
 ## Notes
 

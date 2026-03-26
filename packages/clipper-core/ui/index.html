@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clipper Core UI</title>
+  <style>
+    :root {
+      --bg: #0f1220;
+      --panel: #171a2b;
+      --line: #2a2f4a;
+      --text: #e7ebff;
+      --muted: #9aa4d0;
+      --accent: #5ea0ff;
+      --ok: #34d399;
+      --warn: #fbbf24;
+      --error: #fb7185;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .app {
+      display: grid;
+      grid-template-columns: 360px 1fr 1fr;
+      gap: 12px;
+      padding: 12px;
+      min-height: 100vh;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+    }
+    h2 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 12px; color: var(--muted); }
+    input, textarea, button {
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #111428;
+      color: var(--text);
+      padding: 8px 10px;
+      font-size: 13px;
+    }
+    textarea { min-height: 92px; resize: vertical; }
+    .template { min-height: 220px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .output { min-height: 68vh; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; overflow: auto; }
+    button {
+      background: linear-gradient(180deg, #4f8dff 0%, #3d75db 100%);
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .btn-secondary {
+      background: #111428;
+      border: 1px solid var(--line);
+      color: var(--text);
+      font-weight: 500;
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .status { font-size: 12px; color: var(--muted); min-height: 16px; }
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow: auto;
+      min-height: 0;
+    }
+    .step {
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--accent);
+      border-radius: 8px;
+      padding: 8px;
+      background: #111428;
+    }
+    .step.ok { border-left-color: var(--ok); }
+    .step.warn { border-left-color: var(--warn); }
+    .step.error { border-left-color: var(--error); }
+    .meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .chip {
+      display: inline-block;
+      padding: 2px 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="panel">
+      <h2>Input</h2>
+      <div class="field">
+        <label for="url">Website URL</label>
+        <input id="url" value="https://docs.npmjs.com/about-npm" />
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="minContentLength">Min Content Length</label>
+          <input id="minContentLength" type="number" value="200" />
+        </div>
+        <div class="field">
+          <label for="minWordCount">Min Word Count</label>
+          <input id="minWordCount" type="number" value="60" />
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="autoEnabled">Auto Stage A/B</label>
+          <input id="autoEnabled" type="checkbox" checked />
+        </div>
+        <div class="field">
+          <label for="requireTitle">Require Title</label>
+          <input id="requireTitle" type="checkbox" checked />
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="includeMetadata">Include Metadata In Output</label>
+          <input id="includeMetadata" type="checkbox" checked />
+        </div>
+        <div class="field"></div>
+      </div>
+      <div class="field">
+        <label for="templateJson">Template JSON (optional)</label>
+        <textarea id="templateJson" class="template" placeholder="Leave empty to use built-in default template."></textarea>
+      </div>
+      <button id="runBtn">Run Extraction</button>
+      <div id="status" class="status"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Processing Procedure</h2>
+      <div class="meta">
+        <div>Final Stage: <span id="finalStage" class="chip">n/a</span></div>
+        <div>Elapsed: <span id="elapsed" class="chip">n/a</span></div>
+        <div>Title: <span id="title" class="chip">n/a</span></div>
+        <div>Content Len: <span id="contentLength" class="chip">n/a</span></div>
+      </div>
+      <div id="timeline" class="timeline"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Final Output (Markdown)</h2>
+      <div class="btn-row">
+        <button id="copyBtn" class="btn-secondary" type="button">Copy Output</button>
+        <button id="downloadBtn" class="btn-secondary" type="button">Download .md</button>
+      </div>
+      <textarea id="output" class="output" readonly></textarea>
+    </section>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    function addStep(container, title, body, kind = 'ok') {
+      const div = document.createElement('div');
+      div.className = `step ${kind}`;
+      const titleEl = document.createElement('strong');
+      titleEl.textContent = title;
+      const bodyEl = document.createElement('div');
+      bodyEl.textContent = body;
+      div.appendChild(titleEl);
+      div.appendChild(bodyEl);
+      container.appendChild(div);
+    }
+
+    function renderTimeline(payload) {
+      const timeline = $('timeline');
+      timeline.innerHTML = '';
+
+      if (!payload.trace) {
+        addStep(timeline, 'Stage A only', 'Auto trace is unavailable (auto mode disabled).', 'warn');
+        return;
+      }
+
+      const t = payload.trace;
+      addStep(
+        timeline,
+        'Route Decision',
+        `source=${t.initialRoute.source}, reason=${t.initialRoute.reason}`
+      );
+
+      if (t.stageA.attempted) {
+        const quality = t.stageA.quality;
+        const qualityText = quality
+          ? `score=${quality.score}, pass=${quality.pass}`
+          : 'quality=n/a';
+        addStep(
+          timeline,
+          'Stage A (fetch + extract)',
+          `duration=${t.stageA.durationMs}ms, ${qualityText}`,
+          quality && !quality.pass ? 'warn' : 'ok'
+        );
+        if (quality && Array.isArray(quality.checks)) {
+          for (const check of quality.checks) {
+            addStep(
+              timeline,
+              `Check: ${check.name}`,
+              `pass=${check.pass}, actual=${check.actual}, expected=${check.expected}`,
+              check.pass ? 'ok' : 'warn'
+            );
+          }
+        }
+      } else {
+        addStep(timeline, 'Stage A', 'Not attempted.', 'warn');
+      }
+
+      if (t.stageB.attempted) {
+        addStep(
+          timeline,
+          'Stage B (rendered fallback)',
+          `renderer=${t.stageB.renderer || 'unknown'}, duration=${t.stageB.durationMs}ms`,
+          'ok'
+        );
+      } else {
+        addStep(timeline, 'Stage B', 'Not used.', 'ok');
+      }
+    }
+
+    function yamlEscape(input) {
+      const text = String(input == null ? '' : input)
+        .replace(/\r\n/g, '\n')
+        .replace(/\n/g, ' ')
+        .replace(/\\/g, '\\\\')
+        .replace(/"/g, '\\"');
+      return `"${text}"`;
+    }
+
+    function formatMetadata(payload) {
+      const title = payload.result.title || '';
+      const noteName = payload.result.noteName || '';
+      const finalStage = payload.trace ? payload.trace.finalStage : 'stageA';
+      const routeSource = payload.trace ? payload.trace.initialRoute.source : 'n/a';
+      const routeReason = payload.trace ? payload.trace.initialRoute.reason : 'auto disabled';
+      const stageAScore = payload.trace && payload.trace.stageA && payload.trace.stageA.quality
+        ? payload.trace.stageA.quality.score
+        : 'n/a';
+
+      const lines = [
+        '---',
+        `source_url: ${yamlEscape(payload.result.url || '')}`,
+        `title: ${yamlEscape(title)}`,
+        `note_name: ${yamlEscape(noteName)}`,
+        `final_stage: ${yamlEscape(finalStage)}`,
+        `elapsed_ms: ${payload.elapsedMs}`,
+        `content_length: ${payload.result.contentLength || 0}`,
+        `route_source: ${yamlEscape(routeSource)}`,
+        `route_reason: ${yamlEscape(routeReason)}`,
+        `stage_a_quality_score: ${yamlEscape(stageAScore)}`,
+        '---',
+        ''
+      ];
+      return lines.join('\n');
+    }
+
+    async function run() {
+      const status = $('status');
+      const runBtn = $('runBtn');
+      runBtn.disabled = true;
+      status.textContent = 'Running extraction...';
+
+      try {
+        const body = {
+          url: $('url').value.trim(),
+          templateJson: $('templateJson').value.trim(),
+          autoEnabled: $('autoEnabled').checked,
+          minContentLength: Number($('minContentLength').value || 200),
+          minWordCount: Number($('minWordCount').value || 60),
+          requireTitle: $('requireTitle').checked,
+        };
+
+        const response = await fetch('/api/extract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+
+        const payload = await response.json();
+        if (!payload.ok) {
+          throw new Error(payload.error || 'Extraction failed');
+        }
+
+        const includeMetadata = $('includeMetadata').checked;
+        const metadataText = includeMetadata ? formatMetadata(payload) : '';
+        $('output').value = `${metadataText}${payload.result.fullContent || ''}`;
+        $('finalStage').textContent = payload.trace ? payload.trace.finalStage : 'stageA';
+        $('elapsed').textContent = `${payload.elapsedMs}ms`;
+        $('title').textContent = payload.result.title || '(empty)';
+        $('contentLength').textContent = String(payload.result.contentLength || 0);
+        renderTimeline(payload);
+        status.textContent = 'Done.';
+      } catch (error) {
+        status.textContent = `Error: ${error.message || error}`;
+      } finally {
+        runBtn.disabled = false;
+      }
+    }
+
+    async function copyOutput() {
+      const status = $('status');
+      const text = $('output').value || '';
+      if (!text.trim()) {
+        status.textContent = 'Nothing to copy yet.';
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        status.textContent = 'Output copied to clipboard.';
+      } catch (error) {
+        status.textContent = 'Copy failed. Please copy manually.';
+      }
+    }
+
+    function safeFileName(input) {
+      return String(input || '')
+        .toLowerCase()
+        .replace(/^https?:\/\//, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 120) || 'clipper-output';
+    }
+
+    function downloadOutput() {
+      const status = $('status');
+      const text = $('output').value || '';
+      if (!text.trim()) {
+        status.textContent = 'Nothing to download yet.';
+        return;
+      }
+
+      const urlValue = $('url').value.trim();
+      const fileName = `${safeFileName(urlValue)}.md`;
+      const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
+      status.textContent = `Downloaded ${fileName}`;
+    }
+
+    $('runBtn').addEventListener('click', run);
+    $('copyBtn').addEventListener('click', copyOutput);
+    $('downloadBtn').addEventListener('click', downloadOutput);
+  </script>
+</body>
+</html>
+

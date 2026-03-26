@@ -14,10 +14,19 @@
 	"scripts": {
 		"build": "tsc -p tsconfig.json",
 		"clean": "rm -rf dist",
+		"test": "npm run test:all",
+		"test:all": "npm run test:unit && npm run test:contract && npm run test:e2e",
+		"test:unit": "npm run build && node --test \"tests/unit/*.test.cjs\"",
+		"test:contract": "npm run build && node --test \"tests/contract/*.test.cjs\"",
+		"test:e2e": "npm run build && node --test \"tests/e2e/*.test.cjs\"",
+		"test:integration:playwright": "npm run build && node --test \"tests/integration/*.integration.test.cjs\"",
 		"example:local": "node examples/run-local.js",
 		"example:url": "node examples/run-url.js",
 		"example:url:full": "node examples/run-url-full.js",
-		"example:url:any": "node examples/run-url-any.js"
+		"example:url:any": "node examples/run-url-any.js",
+		"example:url:auto": "node examples/run-url-any.js --auto --trace",
+		"example:extract": "node examples/extract.js",
+		"ui:start": "npm run build && node ui/server.js"
 	},
 	"dependencies": {
 		"dayjs": "^1.11.13",
@@ -27,6 +36,15 @@
 	},
 	"devDependencies": {
 		"@types/node": "^24.0.0",
+		"playwright": "^1.58.2",
 		"typescript": "^5.5.4"
+	},
+	"peerDependencies": {
+		"playwright": "^1.52.0"
+	},
+	"peerDependenciesMeta": {
+		"playwright": {
+			"optional": true
+		}
 	}
 }
