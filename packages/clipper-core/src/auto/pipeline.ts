@@ -9,6 +9,7 @@ import type {
 	DomainPolicy,
 	RouteDecision,
 } from './types';
+import { DECISION_TRACE_VERSION as TRACE_VERSION } from './types';
 
 function nowMs(): number {
 	return Date.now();
@@ -30,6 +31,7 @@ export async function runAutoPipeline(input: AutoPipelineInput): Promise<AutoPip
 	});
 
 	const trace: DecisionTrace = {
+		traceVersion: TRACE_VERSION,
 		url: input.url,
 		host,
 		initialRoute: route,

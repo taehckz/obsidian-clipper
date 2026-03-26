@@ -11,6 +11,43 @@ Reusable clipping package for non-extension projects, with local vendored core l
 - `clipFromTemplates()` to auto-pick one template from many.
 - `matchTemplateForUrl()` for optional multi-template matching.
 - Custom `fetchImpl`, `htmlFetcher`, and `templateResolver` hooks.
+- Pluggable auto-mode contracts: `PolicyStore`, `RendererAdapter`, threshold controls, and trace output.
+- Local UI (`npm run ui:start`) for input, procedure visualization, and markdown output.
+
+## Scope note (future carve-out)
+
+`packages/clipper-core` is currently developed inside the main `obsidian-clipper` repo,
+but this package is intentionally self-contained and designed to be moved into its own
+standalone repository later.
+
+For carve-out planning details, see:
+
+- `docs/INDEX.md`
+- `docs/extraction-plan.md`
+- `docs/development-log.md`
+
+## Distribution and dependency policy
+
+This project uses a **library-first distribution mode**:
+
+- Published package artifact: `dist/` only.
+- UI, examples, tests, and docs are development assets in this repository/workspace.
+- This keeps the npm package lean and focused for embedding in other projects.
+
+Playwright policy:
+
+- Stage A (HTTP + extraction) works without Playwright.
+- Stage B (rendered fallback) requires Playwright at runtime.
+- `playwright` is:
+  - optional peer dependency for consumers that enable Stage B,
+  - dev dependency here for local UI and integration testing.
+
+Recommended Stage B setup for consumers:
+
+```bash
+npm install playwright
+npx playwright install chromium
+```
 
 ## Install and build
 
@@ -209,6 +246,8 @@ UI provides:
 - Input panel: URL, Stage A/B controls, thresholds, optional template JSON.
 - Procedure panel: route decision, Stage A quality checks, Stage B fallback usage, timings.
 - Output panel: final markdown content.
+- Output actions: include metadata toggle, copy output, and download `.md`.
+- Runtime capability status: indicates whether Stage B (Playwright) is currently available.
 
 ## Standalone extraction plan
 
@@ -257,6 +296,7 @@ const result = await core.clipFromTemplates({
 - Domain policy store is pluggable (`InMemoryPolicyStore` default, optional `JsonFilePolicyStore` for persistence).
 - Thresholds are configurable (`minContentLength`, `minWordCount`, `requireTitle`).
 - Optional decision trace output can be used later by UI tooling.
+- Decision trace is versioned via `traceVersion` (`DECISION_TRACE_VERSION` export).
 
 Example:
 

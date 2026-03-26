@@ -80,31 +80,37 @@ export class InMemoryPolicyStore implements PolicyStore {
 
 export class JsonFilePolicyStore implements PolicyStore {
 	private readonly filePath: string;
+	private writeQueue: Promise<void> = Promise.resolve();
 
 	constructor(filePath: string) {
 		this.filePath = path.resolve(filePath);
 	}
 
 	async get(host: string): Promise<DomainPolicy | undefined> {
+		await this.writeQueue;
 		const state = await this.readState();
 		return state.policies[host];
 	}
 
 	async set(host: string, policy: DomainPolicy): Promise<void> {
-		const state = await this.readState();
-		state.policies[host] = normalizePolicy({
-			...policy,
-			updatedAt: new Date().toISOString(),
+		await this.enqueueWrite(async () => {
+			const state = await this.readState();
+			state.policies[host] = normalizePolicy({
+				...policy,
+				updatedAt: new Date().toISOString(),
+			});
+			state.updatedAt = new Date().toISOString();
+			await this.writeState(state);
 		});
-		state.updatedAt = new Date().toISOString();
-		await this.writeState(state);
 	}
 
 	async delete(host: string): Promise<void> {
-		const state = await this.readState();
-		delete state.policies[host];
-		state.updatedAt = new Date().toISOString();
-		await this.writeState(state);
+		await this.enqueueWrite(async () => {
+			const state = await this.readState();
+			delete state.policies[host];
+			state.updatedAt = new Date().toISOString();
+			await this.writeState(state);
+		});
 	}
 
 	private async readState(): Promise<JsonPolicyFileV1> {
@@ -122,6 +128,12 @@ export class JsonFilePolicyStore implements PolicyStore {
 	private async writeState(state: JsonPolicyFileV1): Promise<void> {
 		await fs.mkdir(path.dirname(this.filePath), { recursive: true });
 		await fs.writeFile(this.filePath, JSON.stringify(state, null, 2), 'utf8');
+	}
+
+	private async enqueueWrite(task: () => Promise<void>): Promise<void> {
+		const run = this.writeQueue.then(task);
+		this.writeQueue = run.catch(() => undefined);
+		await run;
 	}
 }
 

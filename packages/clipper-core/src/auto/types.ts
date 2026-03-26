@@ -1,6 +1,7 @@
 import type { ClipResult, DocumentParser, Template } from '../index';
 
 export type AutoStage = 'stageA' | 'stageB';
+export const DECISION_TRACE_VERSION = 1;
 
 export interface QualityCheck {
 	name: string;
@@ -67,6 +68,7 @@ export interface RendererAdapter {
 }
 
 export interface DecisionTrace {
+	traceVersion: number;
 	url: string;
 	host: string;
 	initialRoute: RouteDecision;

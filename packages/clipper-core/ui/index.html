@@ -150,6 +150,7 @@
         <label for="templateJson">Template JSON (optional)</label>
         <textarea id="templateJson" class="template" placeholder="Leave empty to use built-in default template."></textarea>
       </div>
+      <div id="capabilityStatus" class="status">Checking runtime capabilities...</div>
       <button id="runBtn">Run Extraction</button>
       <div id="status" class="status"></div>
     </section>
@@ -177,6 +178,7 @@
 
   <script>
     const $ = (id) => document.getElementById(id);
+    let runtimeCapabilities = null;
 
     function addStep(container, title, body, kind = 'ok') {
       const div = document.createElement('div');
@@ -240,6 +242,15 @@
         );
       } else {
         addStep(timeline, 'Stage B', 'Not used.', 'ok');
+      }
+
+      if (payload.capabilities && payload.capabilities.stageB && !payload.capabilities.stageB.available) {
+        addStep(
+          timeline,
+          'Stage B Capability',
+          `unavailable: ${payload.capabilities.stageB.reason}`,
+          'warn'
+        );
       }
     }
 
@@ -306,6 +317,9 @@
           throw new Error(payload.error || 'Extraction failed');
         }
 
+        runtimeCapabilities = payload.capabilities || runtimeCapabilities;
+        renderCapabilityStatus();
+
         const includeMetadata = $('includeMetadata').checked;
         const metadataText = includeMetadata ? formatMetadata(payload) : '';
         $('output').value = `${metadataText}${payload.result.fullContent || ''}`;
@@ -319,6 +333,33 @@
         status.textContent = `Error: ${error.message || error}`;
       } finally {
         runBtn.disabled = false;
+      }
+    }
+
+    function renderCapabilityStatus() {
+      const capEl = $('capabilityStatus');
+      if (!runtimeCapabilities || !runtimeCapabilities.stageB) {
+        capEl.textContent = 'Runtime capability: unknown.';
+        return;
+      }
+      if (runtimeCapabilities.stageB.available) {
+        capEl.textContent = `Stage B capability: available (${runtimeCapabilities.stageB.reason})`;
+      } else {
+        capEl.textContent = `Stage B capability: unavailable (${runtimeCapabilities.stageB.reason}). Auto mode will run Stage A only.`;
+      }
+    }
+
+    async function loadCapabilities() {
+      try {
+        const response = await fetch('/api/capabilities');
+        const payload = await response.json();
+        if (payload.ok) {
+          runtimeCapabilities = payload.capabilities || null;
+        }
+      } catch (error) {
+        runtimeCapabilities = null;
+      } finally {
+        renderCapabilityStatus();
       }
     }
 
@@ -371,6 +412,7 @@
     $('runBtn').addEventListener('click', run);
     $('copyBtn').addEventListener('click', copyOutput);
     $('downloadBtn').addEventListener('click', downloadOutput);
+    loadCapabilities();
   </script>
 </body>
 </html>

@@ -5,6 +5,7 @@ const path = require('node:path');
 const {
 	ClipperCore,
 	JsonFilePolicyStore,
+	checkPlaywrightAvailability,
 } = require('../dist/index.js');
 
 const PORT = Number(process.env.CLIPPER_CORE_UI_PORT || 3040);
@@ -92,6 +93,7 @@ async function handleExtract(req, res) {
 		const startedAt = Date.now();
 		let result;
 		let trace;
+		const capabilities = await getCapabilities();
 		if (autoEnabled) {
 			const out = await core.clipFromUrlAuto({
 				url,
@@ -104,6 +106,7 @@ async function handleExtract(req, res) {
 				},
 				auto: {
 					enableTrace: true,
+					forceStage: capabilities.stageB.available ? undefined : 'stageA',
 					thresholds: {
 						minContentLength,
 						minWordCount,
@@ -129,6 +132,7 @@ async function handleExtract(req, res) {
 		sendJson(res, 200, {
 			ok: true,
 			elapsedMs: Date.now() - startedAt,
+			capabilities,
 			result: {
 				url,
 				noteName: result.noteName,
@@ -146,6 +150,13 @@ async function handleExtract(req, res) {
 			error: String(error && error.message ? error.message : error),
 		});
 	}
+}
+
+async function getCapabilities() {
+	const stageB = await checkPlaywrightAvailability();
+	return {
+		stageB,
+	};
 }
 
 const server = http.createServer(async (req, res) => {
@@ -167,6 +178,12 @@ const server = http.createServer(async (req, res) => {
 
 		if (method === 'POST' && url === '/api/extract') {
 			await handleExtract(req, res);
+			return;
+		}
+
+		if (method === 'GET' && url === '/api/capabilities') {
+			const capabilities = await getCapabilities();
+			sendJson(res, 200, { ok: true, capabilities });
 			return;
 		}
 

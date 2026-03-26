@@ -467,7 +467,11 @@ export {
 	migratePolicyFile,
 	POLICY_SCHEMA_VERSION,
 } from './auto/policy-store';
-export { PlaywrightRendererAdapter } from './auto/adapters/playwright';
+export { DECISION_TRACE_VERSION } from './auto/types';
+export {
+	PlaywrightRendererAdapter,
+	checkPlaywrightAvailability,
+} from './auto/adapters/playwright';
 export { clip, matchTemplate };
 export type {
 	AutoOptions,

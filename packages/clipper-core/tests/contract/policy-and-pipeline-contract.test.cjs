@@ -6,6 +6,7 @@ const path = require('node:path');
 
 const {
 	InMemoryPolicyStore,
+	DECISION_TRACE_VERSION,
 	JsonFilePolicyStore,
 	migratePolicyFile,
 } = require('../../dist/index.js');
@@ -54,6 +55,30 @@ test('JsonFilePolicyStore contract: persists and reloads policy', async () => {
 	const value = await storeB.get('example.com');
 	assert.equal(value.forceStageB, true);
 	assert.equal(typeof value.updatedAt, 'string');
+});
+
+test('JsonFilePolicyStore contract: concurrent writes preserve all hosts', async () => {
+	const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'clipper-core-policy-concurrent-'));
+	const filePath = path.join(tempDir, 'policy.json');
+	const store = new JsonFilePolicyStore(filePath);
+
+	await Promise.all([
+		store.set('a.example.com', {
+			version: 1,
+			updatedAt: new Date().toISOString(),
+			lastReason: 'a',
+		}),
+		store.set('b.example.com', {
+			version: 1,
+			updatedAt: new Date().toISOString(),
+			lastReason: 'b',
+		}),
+	]);
+
+	const a = await store.get('a.example.com');
+	const b = await store.get('b.example.com');
+	assert.equal(a.lastReason, 'a');
+	assert.equal(b.lastReason, 'b');
 });
 
 test('migratePolicyFile contract: normalizes unknown/missing structure', () => {
@@ -117,9 +142,54 @@ test('runAutoPipeline contract: Stage A failure falls back to Stage B and emits 
 
 	assert.equal(stageAFetched, true);
 	assert.equal(stageBRendered, true);
+	assert.equal(output.trace.traceVersion, DECISION_TRACE_VERSION);
 	assert.equal(output.trace.finalStage, 'stageB');
 	assert.equal(output.trace.stageA.attempted, true);
 	assert.equal(output.trace.stageB.attempted, true);
 	assert.ok(output.result.content.length > 100);
+});
+
+test('runAutoPipeline contract: trace schema includes required top-level fields', async () => {
+	const output = await runAutoPipeline({
+		url: 'https://example.com/post',
+		host: 'example.com',
+		template: {
+			id: 't',
+			name: 'T',
+			behavior: 'create',
+			noteNameFormat: '{{title}}',
+			path: '',
+			noteContentFormat: '{{content}}',
+			properties: [],
+		},
+		auto: {
+			enableTrace: true,
+			thresholds: {
+				minContentLength: 10,
+				minWordCount: 2,
+				requireTitle: true,
+			},
+			policyStore: new InMemoryPolicyStore(),
+		},
+		fetchHtml: async () =>
+			'<html><head><title>A</title></head><body><article>word word word</article></body></html>',
+		clipFromHtml: async () => makeClipResult('word word word', 'A'),
+		evaluateQuality: evaluateClipQuality,
+		decideRoute: decideAutoRoute,
+	});
+
+	assert.ok(output.trace);
+	const keys = Object.keys(output.trace).sort();
+	assert.deepEqual(keys, [
+		'finalStage',
+		'host',
+		'initialRoute',
+		'policyUpdated',
+		'stageA',
+		'stageB',
+		'traceVersion',
+		'url',
+	]);
+	assert.equal(output.trace.traceVersion, DECISION_TRACE_VERSION);
 });
 

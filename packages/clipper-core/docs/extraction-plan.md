@@ -8,6 +8,35 @@ This plan assumes `clipper-core` remains in the monorepo while UI and APIs are s
 - Preserve API compatibility for downstream users.
 - Move to independent CI/version/release lifecycle.
 
+## Pre-carve-out checklist
+
+Use this as the final readiness gate before splitting to a standalone repo.
+
+### A. Correctness and robustness
+
+- [x] `JsonFilePolicyStore` is concurrency-safe for parallel requests (no lost updates).
+- [x] Stage B lifecycle errors cannot crash the local API server.
+- [x] Runtime capability checks clearly indicate when Stage B is unavailable.
+
+### B. API and contract stability
+
+- [ ] `clipFromUrlAuto` options and result shape are stable across two iterations.
+- [x] `DecisionTrace` schema is documented and versioned (if consumed externally).
+- [x] Contract tests cover router, quality evaluator, store, and pipeline behavior.
+
+### C. Packaging and distribution decision
+
+- [x] Distribution mode chosen:
+  - library-only package (`dist` only), or
+  - toolkit package (includes UI/docs/examples).
+- [x] Playwright dependency strategy is explicit and documented.
+
+### D. Documentation and operations
+
+- [x] `README.md` reflects actual scripts and setup paths.
+- [x] `docs/development-log.md` includes major issues and fixes.
+- [x] CI runs build + tests from clean checkout.
+
 ## Readiness checklist
 
 - Public API for `clipFromUrl`, `clipFromUrlAuto`, trace, and stores is stable for 2 iterations.

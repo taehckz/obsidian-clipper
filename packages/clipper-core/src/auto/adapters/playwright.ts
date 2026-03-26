@@ -74,3 +74,44 @@ export class PlaywrightRendererAdapter implements RendererAdapter {
 	}
 }
 
+export async function checkPlaywrightAvailability(): Promise<{
+	available: boolean;
+	reason: string;
+}> {
+	const dynamicImport = new Function('m', 'return import(m)') as (
+		moduleName: string
+	) => Promise<any>;
+
+	let playwright: any;
+	try {
+		playwright = await dynamicImport('playwright');
+	} catch {
+		return {
+			available: false,
+			reason: 'Playwright package is not installed.',
+		};
+	}
+
+	const chromium = playwright?.chromium ?? playwright?.default?.chromium;
+	if (!chromium) {
+		return {
+			available: false,
+			reason: 'Playwright chromium launcher is unavailable.',
+		};
+	}
+
+	try {
+		// This also surfaces "browser executable missing" in many environments.
+		chromium.executablePath();
+		return {
+			available: true,
+			reason: 'Playwright Stage B renderer is available.',
+		};
+	} catch (error) {
+		return {
+			available: false,
+			reason: `Playwright is installed but Chromium executable is unavailable: ${String((error as any)?.message || error)}`,
+		};
+	}
+}
+
