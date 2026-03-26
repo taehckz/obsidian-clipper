@@ -26,3 +26,6 @@ context/
 
 # clipper-core runtime UI cache
 packages/clipper-core/ui/.data/
+
+# clipper-core generated example outputs
+packages/clipper-core/examples/output/*.md
