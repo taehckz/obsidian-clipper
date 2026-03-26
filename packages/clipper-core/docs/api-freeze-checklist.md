@@ -74,24 +74,24 @@ Notes:
 - Contract compatibility: PASS
 - Runtime behavior: PASS
 - Documentation sync: PASS
-- CI status: pending (local clean run PASS; awaiting GitHub workflow confirmation)
+- CI status: PASS (GitHub Actions `clipper-core ci` run #3 on commit `042615b`)
 
 Notes:
 - API changes observed: none in this freeze run.
 - Trace/schema changes observed: none in this freeze run.
 - Deferred breaking changes: none.
-- Decision: PASS (provisional; final when CI workflow run is green)
+- Decision: PASS
 
-### Freeze Iteration 2 (pending)
+### Freeze Iteration 2 (2026-03-26)
 
-- Contract compatibility: pending
-- Runtime behavior: pending
-- Documentation sync: pending
-- CI status: pending
+- Contract compatibility: PASS
+- Runtime behavior: PASS
+- Documentation sync: PASS
+- CI status: PASS (GitHub Actions `clipper-core ci` run #3 on commit `042615b`)
 
 Notes:
-- API changes observed: none yet
-- Trace/schema changes observed: none yet
-- Deferred breaking changes: none yet
-- Decision: pending
+- API changes observed: none in freeze-target contracts (`ClipFromUrlAutoOptions`, `ClipFromUrlAutoResult`).
+- Trace/schema changes observed: none (`DecisionTrace.traceVersion` unchanged).
+- Deferred breaking changes: none.
+- Decision: PASS
 

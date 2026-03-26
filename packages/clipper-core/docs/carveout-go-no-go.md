@@ -4,8 +4,8 @@ Last updated: 2026-03
 
 ## Decision (current)
 
-- **Recommendation:** **No-Go (temporary)** for immediate standalone split.
-- **Reason:** Technical foundation is strong; only the API stability process gate remains.
+- **Recommendation:** **Go** for standalone split planning.
+- **Reason:** Technical and process gates are complete, including two-pass API stability window and green CI.
 
 ## Completed gates
 
@@ -24,8 +24,7 @@ Last updated: 2026-03
 
 ## Remaining blockers
 
-1. **API stability window (process gate)**
-   - `clipFromUrlAuto` contract should remain stable across two iterations.
+- None blocking the carve-out gate at this stage.
 
 ## Evidence from current audit
 
@@ -34,13 +33,15 @@ Last updated: 2026-03
   - `npm run build`
   - `npm test`
 - Unit, contract, and E2E tests all passed.
+- API freeze checklist now records two consecutive PASS iterations.
+- GitHub Actions `clipper-core ci` run #3 is green on commit `042615b`.
 - No hidden dependency references to parent repo paths were found.
 
-## Next-step plan to reach Go
+## Next-step plan after Go
 
-1. Hold API freeze window for 1-2 iterations:
-   - no breaking changes to `clipFromUrlAuto`/trace shape.
-2. Re-run checklist and mark final Go.
+1. Bootstrap standalone repository from `packages/clipper-core`.
+2. Copy CI workflow and verify clean checkout in the new repository.
+3. Run first consumer integration cycle before tagging stable release.
 
 Use:
 

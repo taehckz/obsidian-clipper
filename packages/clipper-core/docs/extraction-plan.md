@@ -20,7 +20,7 @@ Use this as the final readiness gate before splitting to a standalone repo.
 
 ### B. API and contract stability
 
-- [ ] `clipFromUrlAuto` options and result shape are stable across two iterations.
+- [x] `clipFromUrlAuto` options and result shape are stable across two iterations.
 - [x] `DecisionTrace` schema is documented and versioned (if consumed externally).
 - [x] Contract tests cover router, quality evaluator, store, and pipeline behavior.
 

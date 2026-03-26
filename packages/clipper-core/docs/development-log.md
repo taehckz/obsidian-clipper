@@ -170,7 +170,23 @@ Need an operator-friendly interface for URL input, extraction trace visibility, 
 ### Status
 
 - Iteration 1 recorded as PASS in `docs/api-freeze-checklist.md`.
-- CI item remains pending until GitHub Actions workflow run is confirmed green.
+- CI confirmation: GitHub Actions `clipper-core ci` run #3 (commit `042615b`) is green.
+
+## 2026-03: Freeze iteration 2 closed and gate completed
+
+### Evidence
+
+- Freeze target contracts unchanged:
+  - `ClipFromUrlAutoOptions`
+  - `ClipFromUrlAutoResult`
+  - `DecisionTrace.traceVersion`
+- CI remains green on latest stabilization commit:
+  - GitHub Actions `clipper-core ci` run #3 (`042615b`)
+
+### Outcome
+
+- Two consecutive freeze iterations now PASS.
+- Pre-carve-out API stability process gate is closed.
 
 ## Carve-out readiness notes
 
