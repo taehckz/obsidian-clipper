@@ -144,6 +144,34 @@ Need an operator-friendly interface for URL input, extraction trace visibility, 
 
 - Clean-checkout validation is now automated for `clipper-core`.
 
+## 2026-03: API freeze process scaffold added
+
+### Key work
+
+- Added `docs/api-freeze-checklist.md` to formalize pre-carve-out stability checks.
+- Included:
+  - freeze iteration template (pass/fail structure),
+  - two pending iteration tracking slots for stabilization cycles.
+
+### Outcome
+
+- API freeze is now operationalized as a repeatable process instead of ad hoc checks.
+- Team can track contract stability over two iterations before standalone split.
+
+## 2026-03: Freeze iteration 1 executed (local)
+
+### Evidence
+
+- Clean install: `npm ci` passed.
+- Build: `npm run build` passed.
+- Baseline tests: `npm test` passed (unit/contract/e2e).
+- Optional integration: `RUN_PLAYWRIGHT_INTEGRATION=1 npm run test:integration:playwright` passed.
+
+### Status
+
+- Iteration 1 recorded as PASS in `docs/api-freeze-checklist.md`.
+- CI item remains pending until GitHub Actions workflow run is confirmed green.
+
 ## Carve-out readiness notes
 
 When moving `clipper-core` to a standalone repository, prioritize:

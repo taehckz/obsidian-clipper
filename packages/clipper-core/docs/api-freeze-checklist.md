@@ -10,6 +10,10 @@ Primary freeze targets:
 - `clipFromUrlAuto` result shape
 - `DecisionTrace` schema (`traceVersion`)
 
+Glossary:
+
+- CI = Continuous Integration (automated clean-environment build/test checks, e.g. GitHub Actions).
+
 ## Iteration checklist
 
 Repeat this section for each freeze iteration.
@@ -43,4 +47,51 @@ Repeat this section for each freeze iteration.
 - Two consecutive iterations pass all checks above.
 - No pending breaking-change proposals for freeze targets.
 - CI build/test remains green on clean checkout.
+
+## Iteration record template
+
+Use this template to log each freeze iteration.
+
+```md
+### Freeze Iteration <N> (<YYYY-MM-DD>)
+
+- Contract compatibility: PASS | FAIL
+- Runtime behavior: PASS | FAIL
+- Documentation sync: PASS | FAIL
+- CI status: PASS | FAIL
+
+Notes:
+- API changes observed:
+- Trace/schema changes observed:
+- Deferred breaking changes:
+- Decision: PASS | FAIL
+```
+
+## Freeze iteration tracking
+
+### Freeze Iteration 1 (2026-03-25)
+
+- Contract compatibility: PASS
+- Runtime behavior: PASS
+- Documentation sync: PASS
+- CI status: pending (local clean run PASS; awaiting GitHub workflow confirmation)
+
+Notes:
+- API changes observed: none in this freeze run.
+- Trace/schema changes observed: none in this freeze run.
+- Deferred breaking changes: none.
+- Decision: PASS (provisional; final when CI workflow run is green)
+
+### Freeze Iteration 2 (pending)
+
+- Contract compatibility: pending
+- Runtime behavior: pending
+- Documentation sync: pending
+- CI status: pending
+
+Notes:
+- API changes observed: none yet
+- Trace/schema changes observed: none yet
+- Deferred breaking changes: none yet
+- Decision: pending
 
